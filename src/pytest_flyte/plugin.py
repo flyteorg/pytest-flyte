@@ -2,6 +2,7 @@ import hashlib
 import os
 import pathlib
 import shutil
+from contextlib import contextmanager
 
 import pytest
 from flytekit.clients import friendly
@@ -11,6 +12,31 @@ from jinja2 import Environment, PackageLoader
 
 PROJECT_ROOT = os.path.dirname(__file__)
 TEMPLATE_ENV = Environment(loader=PackageLoader("pytest_flyte"))
+
+
+@pytest.fixture(scope="session")
+def capsys_suspender(pytestconfig):
+    """
+    Returns a context manager that can be used to temporarily suspend global capturing of stderr/stdin/stdout.
+
+    Example:
+
+    def test_something(capsys_suspender):
+        print("foo")  # captured
+        with capsys_suspender():
+            print("bar")  # not captured
+        print("baz")  # captured
+
+    """
+
+    @contextmanager
+    def _capsys_suspender():
+        capmanager = pytestconfig.pluginmanager.getplugin('capturemanager')
+        capmanager.suspend_global_capture(in_=True)
+        yield
+        capmanager.resume_global_capture()
+
+    return _capsys_suspender
 
 
 @pytest.fixture(scope="session")
@@ -75,7 +101,7 @@ def docker_cleanup():
 
 
 @pytest.fixture(scope="session")
-def flyteclient(docker_ip, docker_services, docker_compose):
+def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
     port = docker_services.port_for("backend", 30081)
     url = f"{docker_ip}:{port}"
     os.environ["FLYTE_PLATFORM_URL"] = url
@@ -85,6 +111,6 @@ def flyteclient(docker_ip, docker_services, docker_compose):
         docker_compose.execute("exec backend wait-for-flyte.sh")
         return True
 
-    docker_services.wait_until_responsive(timeout=600, pause=1, check=_check)
-
+    with capsys_suspender():
+        docker_services.wait_until_responsive(timeout=600, pause=1, check=_check)
     return friendly.SynchronousFlyteClient(url, insecure=True)

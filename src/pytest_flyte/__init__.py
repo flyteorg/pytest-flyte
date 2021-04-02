@@ -1,4 +1,5 @@
 from pytest_flyte.plugin import (
+    capsys_suspender,
     docker_cleanup,
     docker_compose,
     docker_compose_file,
