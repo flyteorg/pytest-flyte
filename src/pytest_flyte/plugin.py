@@ -75,8 +75,19 @@ def flyte_workflows_register(docker_compose):
 
 
 @pytest.fixture(scope="session")
-def docker_compose(docker_compose_file, docker_compose_project_name):
-    return DockerComposeExecutor(docker_compose_file, docker_compose_project_name)
+def docker_compose(docker_compose_file, docker_compose_project_name, capsys_suspender):
+
+    class _DockerComposeExecutor(DockerComposeExecutor):
+        """
+        This subclass wraps the DockerComposeExecutor.execute method so that pytest capture sys stdin/out/err
+        is suspended whenever docker compose execute is invoked. This is so that the end user doesn't have to
+        use capsys_suspender when using this fixture.
+        """
+        def execute(self, subcommand):
+            with capsys_suspender():
+                super().execute(subcommand)
+
+    return _DockerComposeExecutor(docker_compose_file, docker_compose_project_name)
 
 
 @pytest.fixture(scope="session")
