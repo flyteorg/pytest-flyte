@@ -8,10 +8,10 @@ import pytest
 from flytekit.clients import friendly
 from pytest_docker.plugin import DockerComposeExecutor
 
-from jinja2 import Environment, PackageLoader
+from jinja2 import Environment, FileSystemLoader
 
 PROJECT_ROOT = os.path.dirname(__file__)
-TEMPLATE_ENV = Environment(loader=PackageLoader("pytest_flyte"))
+TEMPLATE_ENV = Environment(loader=FileSystemLoader(os.path.join(PROJECT_ROOT, "templates")))
 
 
 @pytest.fixture(scope="session")
