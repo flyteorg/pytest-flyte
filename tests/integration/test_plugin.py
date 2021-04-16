@@ -35,7 +35,7 @@ def test_stub(flyteclient, flyte_workflows_register):
 @pytest.mark.skip(reason="doesn't work on CI yet")
 def test_launch_workflow(flyteclient, flyte_workflows_register):
     lp = launch_plan.SdkLaunchPlan.fetch(
-        "flytesnacks", "development", "workflows.basic.hello_world.my_wf", f"v{os.getpid()}"
+        "flytesnacks", "development", "workflows.hello_world.my_wf", f"v{os.getpid()}"
     )
     execution = lp.launch_with_literals(
         "flytesnacks", "development", literals.LiteralMap({})
