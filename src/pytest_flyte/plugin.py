@@ -119,7 +119,7 @@ def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
     os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
 
     def _check():
-        docker_compose.execute("exec backend -T wait-for-flyte.sh")
+        docker_compose.execute("exec -T backend wait-for-flyte.sh")
         return True
 
     with capsys_suspender():
