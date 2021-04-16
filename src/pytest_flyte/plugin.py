@@ -123,5 +123,5 @@ def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
         return True
 
     with capsys_suspender():
-        docker_services.wait_until_responsive(timeout=600, pause=1, check=_check)
+        docker_services.wait_until_responsive(timeout=900, pause=1, check=_check)
     return friendly.SynchronousFlyteClient(url, insecure=True)
