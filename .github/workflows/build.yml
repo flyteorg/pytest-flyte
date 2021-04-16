@@ -33,7 +33,7 @@ jobs:
         make setup
     - name: test
       run: |
-        coverage run -m pytest tests
+        coverage run -m pytest tests -vv
     - name: Codecov
       uses: codecov/codecov-action@v1
       with:
