@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: bash -i -l {0}
+        shell: bash -i {0}
     strategy:
       matrix:
         python-version: [3.7, 3.8]
@@ -33,7 +33,7 @@ jobs:
         make setup
     - name: test
       run: |
-        coverage run -m pytest tests
+        COMPOSE_INTERACTIVE_NO_CLI=1 coverage run -m pytest tests
     - name: Codecov
       uses: codecov/codecov-action@v1
       with:
