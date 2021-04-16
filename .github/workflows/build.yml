@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -i {0}
     strategy:
       matrix:
         python-version: [3.7, 3.8]
