@@ -1,3 +1,4 @@
-# pytest_flyte
+# Pytest fixtures for Flyte Integration Testing
 
-Pytest fixtures for simplifying Flyte integration testing
+This package provides [pytest]*https://docs.pytest.org/en/6.2.x/) fixtures for simplifying
+integration testing for [flyte](https://github.com/flyteorg/flyte).
