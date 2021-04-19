@@ -1,0 +1,37 @@
+name: build
+
+on:
+  push:
+    branches:
+    - master
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: cache pip
+      uses: actions/cache@v2
+      with:
+        path: ~/.cache/pip
+        key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', 'requirements.txt')) }}
+    - name: install dependencies
+      run: pip install -r requirements.txt -r dev-requirements.txt
+    - name: test
+      # https://github.com/actions/runner/issues/241#issuecomment-577360161
+      shell: 'script -q -e -c "bash {0}"'
+      run: |
+        coverage run -m pytest -p docker -p flyte tests -vv -s
+    - name: Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        fail_ci_if_error: true

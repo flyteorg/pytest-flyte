@@ -119,9 +119,13 @@ def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
     os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
 
     def _check():
-        docker_compose.execute("exec backend wait-for-flyte.sh")
-        return True
+        try:
+            docker_compose.execute("exec backend wait-for-flyte.sh")
+            return True
+        except Exception as e:
+            print(e)
+            return False
 
     with capsys_suspender():
-        docker_services.wait_until_responsive(timeout=600, pause=1, check=_check)
+        docker_services.wait_until_responsive(timeout=900, pause=1, check=_check)
     return friendly.SynchronousFlyteClient(url, insecure=True)
