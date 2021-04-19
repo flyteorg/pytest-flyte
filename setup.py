@@ -3,9 +3,12 @@
 from setuptools import find_packages, setup
 
 
+__version__ = "0.0.0+develop"
+
+
 setup(
     name="pytest-flyte",
-    version="0.0.0+dev0",
+    version=__version__,
     packages=find_packages("src"),
     entry_points={"pytest11": ["flyte = pytest_flyte"]},
     package_dir={"": "src"},
