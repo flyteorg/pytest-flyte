@@ -122,7 +122,8 @@ def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
         try:
             docker_compose.execute("exec backend wait-for-flyte.sh")
             return True
-        except Exception:
+        except Exception as e:
+            print(e)
             return False
 
     with capsys_suspender():

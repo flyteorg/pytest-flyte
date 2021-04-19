@@ -9,9 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: 'script -q -e -c "bash {0}"'
     strategy:
       matrix:
         python-version: [3.7, 3.8]
@@ -30,6 +27,8 @@ jobs:
     - name: install dependencies
       run: pip install -r requirements.txt -r dev-requirements.txt
     - name: test
+      # https://github.com/actions/runner/issues/241#issuecomment-577360161
+      shell: 'script -q -e -c "bash {0}"'
       run: |
         coverage run -m pytest -p docker -p flyte tests -vv -s
     - name: Codecov
