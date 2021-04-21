@@ -14,6 +14,14 @@ PROJECT_ROOT = os.path.dirname(__file__)
 TEMPLATE_ENV = Environment(loader=FileSystemLoader(os.path.join(PROJECT_ROOT, "templates")))
 
 
+@pytest.hookimpl(tryfirst=True)
+def pytest_addhooks(pluginmanager):
+    import pytest_docker.plugin
+
+    # make sure docker plugin is registered before flyte so pytest-flyte overrides pytest-docker fixtures
+    pluginmanager.register(pytest_docker.plugin, "docker")
+
+
 @pytest.fixture(scope="session")
 def capsys_suspender(pytestconfig):
     """
