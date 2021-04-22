@@ -21,8 +21,8 @@ def pytest_addhooks(pluginmanager):
     # make sure docker plugin is registered before flyte so pytest-flyte overrides pytest-docker fixtures
     try:
         pluginmanager.register(pytest_docker.plugin, "docker")
-    except:
-        pass
+    except ValueError as exc:
+        print(f"pytest-docker already registered: {exc}")
 
 
 @pytest.fixture(scope="session")
