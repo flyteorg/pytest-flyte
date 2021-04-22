@@ -20,7 +20,7 @@ def pytest_addhooks(pluginmanager):
 
     # make sure docker plugin is registered before flyte so pytest-flyte overrides pytest-docker fixtures
     if pluginmanager.is_registered("docker"):
-        pluginmanager.unregister("docker")
+        pluginmanager.unregister(pytest_docker.plugin, "docker")
     pluginmanager.register(pytest_docker.plugin, "docker")
 
 
