@@ -10,3 +10,6 @@ from pytest_flyte.plugin import (
     kustomization_file,
     template_cache,
 )
+
+
+__version__ = "0.0.0+develop"

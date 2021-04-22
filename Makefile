@@ -18,3 +18,15 @@ requirements: requirements.txt dev-requirements.txt
 .PHONY: setup
 setup: install-piptools ## Install requirements
 	pip-sync requirements.txt dev-requirements.txt
+
+PLACEHOLDER := "__version__\ =\ \"0.0.0+develop\""
+
+.PHONY: update-version
+update-version:
+	# ensure the placeholder is there. If grep doesn't find the placeholder
+	# it exits with exit code 1 and github actions aborts the build.
+	grep "$(PLACEHOLDER)" "src/pytest_flyte/__init__.py"
+	sed -i "s/$(PLACEHOLDER)/__version__ = \"${VERSION}\"/g" "src/pytest_flyte/__init__.py"
+
+	grep "$(PLACEHOLDER)" "setup.py"
+	sed -i "s/$(PLACEHOLDER)/__version__ = \"${VERSION}\"/g" "setup.py"
