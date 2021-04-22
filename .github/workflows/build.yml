@@ -25,12 +25,12 @@ jobs:
         path: ~/.cache/pip
         key: ${{ format('{0}-pip-{1}', runner.os, hashFiles('dev-requirements.txt', 'requirements.txt')) }}
     - name: install dependencies
-      run: pip install -r requirements.txt -r dev-requirements.txt
+      run: make setup
     - name: test
       # https://github.com/actions/runner/issues/241#issuecomment-577360161
       shell: 'script -q -e -c "bash {0}"'
       run: |
-        coverage run -m pytest flyte tests -vv -s
+        coverage run -m pytest tests -vv -s
     - name: Codecov
       uses: codecov/codecov-action@v1
       with:
