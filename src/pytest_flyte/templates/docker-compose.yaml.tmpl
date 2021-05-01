@@ -8,5 +8,4 @@ services:
       - "30081"
       - "30084"
     volumes:
-      - {{ flyte_workflows_source_dir }}:/flyteorg/src
       - {{ kustomization_file_path }}:/opt/flyteorg/share/deployment/kustomization.yaml:ro

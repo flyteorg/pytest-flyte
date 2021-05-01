@@ -1,6 +1,5 @@
 FROM ghcr.io/flyteorg/flyte-sandbox:dind
 
-# Install kustomize
 ARG KUSTOMIZE_VERSION="v4.0.5"
 RUN wget -q -O /tmp/kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz \
     && tar -xf /tmp/kustomize.tar.gz -C /flyteorg/bin \

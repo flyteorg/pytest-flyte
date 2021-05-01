@@ -13,15 +13,14 @@ VERSION = os.getpid()
 
 
 @pytest.fixture(scope="session")
-def flyte_workflows_source_dir():
+def flyte_workflows_source():
     return pathlib.Path(os.path.dirname(__file__)) / "mock_flyte_repo"
 
 
 @pytest.fixture(scope="session")
-def flyte_workflows_register(docker_compose):
-    docker_compose.execute(
-        f"exec -w /flyteorg/src -e SANDBOX=1 -e PROJECT={PROJECT} -e VERSION=v{VERSION} "
-        "backend make -C workflows register"
+def flyte_workflows_register(flyte_workflows_source):
+    os.execute(
+        f"flytectl register files -p {PROJECT}"
     )
 
 
