@@ -141,7 +141,7 @@ def docker_cleanup():
 
 @pytest.fixture(scope="session")
 def flyteclient(request):
-    if request.config.getoption("--local") in ["True", "true"]:
+    if request.config.getoption("--local") in ["True", "true", True]:
 
         docker_ip = request.getfixturevalue("docker_ip")
         docker_services = request.getfixturevalue("docker_services")
