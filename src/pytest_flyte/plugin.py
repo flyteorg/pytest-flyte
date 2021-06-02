@@ -11,7 +11,24 @@ from pytest_docker.plugin import DockerComposeExecutor
 from jinja2 import Environment, FileSystemLoader
 
 PROJECT_ROOT = os.path.dirname(__file__)
-TEMPLATE_ENV = Environment(loader=FileSystemLoader(os.path.join(PROJECT_ROOT, "templates")))
+TEMPLATE_ENV = Environment(
+    loader=FileSystemLoader(os.path.join(PROJECT_ROOT, "templates"))
+)
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--local",
+        action="store",
+        default=True,
+        help="Local/Remote",
+    )
+    parser.addoption(
+        "--flyte-platform-url",
+        action="store",
+        default=None,
+        help="Flyte Platform URL",
+    )
 
 
 @pytest.hookimpl(tryfirst=True)
@@ -42,7 +59,7 @@ def capsys_suspender(pytestconfig):
 
     @contextmanager
     def _capsys_suspender():
-        capmanager = pytestconfig.pluginmanager.getplugin('capturemanager')
+        capmanager = pytestconfig.pluginmanager.getplugin("capturemanager")
         capmanager.suspend_global_capture(in_=True)
         yield
         capmanager.resume_global_capture()
@@ -87,13 +104,13 @@ def flyte_workflows_register(docker_compose):
 
 @pytest.fixture(scope="session")
 def docker_compose(docker_compose_file, docker_compose_project_name, capsys_suspender):
-
     class _DockerComposeExecutor(DockerComposeExecutor):
         """
         This subclass wraps the DockerComposeExecutor.execute method so that pytest capture sys stdin/out/err
         is suspended whenever docker compose execute is invoked. This is so that the end user doesn't have to
         use capsys_suspender when using this fixture.
         """
+
         def execute(self, subcommand):
             with capsys_suspender():
                 super().execute(subcommand)
@@ -123,20 +140,42 @@ def docker_cleanup():
 
 
 @pytest.fixture(scope="session")
-def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
-    port = docker_services.port_for("backend", 30081)
-    url = f"{docker_ip}:{port}"
-    os.environ["FLYTE_PLATFORM_URL"] = url
-    os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
+def flyteclient(request):
+    if request.config.getoption("--local") in ["True", "true"]:
 
-    def _check():
-        try:
-            docker_compose.execute("exec backend wait-for-flyte.sh")
-            return True
-        except Exception as e:
-            print(e)
-            return False
+        docker_ip = request.getfixturevalue("docker_ip")
+        docker_services = request.getfixturevalue("docker_services")
+        docker_compose = request.getfixturevalue("docker_compose")
+        capsys_suspender = request.getfixturevalue("capsys_suspender")
 
-    with capsys_suspender():
-        docker_services.wait_until_responsive(timeout=900, pause=1, check=_check)
-    return friendly.SynchronousFlyteClient(url, insecure=True)
+        port = docker_services.port_for("backend", 30081)
+        url = f"{docker_ip}:{port}"
+        os.environ["FLYTE_PLATFORM_URL"] = url
+        os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
+
+        def _check():
+            try:
+                docker_compose.execute("exec backend wait-for-flyte.sh")
+                return True
+            except Exception as e:
+                print(e)
+                return False
+
+        with capsys_suspender():
+            docker_services.wait_until_responsive(timeout=900, pause=1, check=_check)
+        return friendly.SynchronousFlyteClient(url, insecure=True)
+
+    else:
+        capsys_suspender = request.getfixturevalue("capsys_suspender")
+        if request.config.getoption("--flyte-platform-url"):
+            os.environ["FLYTE_PLATFORM_URL"] = request.config.getoption(
+                "--flyte-platform-url"
+            )
+            os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
+            with capsys_suspender():
+                return friendly.SynchronousFlyteClient(
+                    os.environ["FLYTE_PLATFORM_URL"],
+                    insecure=bool(os.environ["FLYTE_PLATFORM_INSECURE"]),
+                )
+        else:
+            raise ValueError("Flyte Platform URL must be set")
