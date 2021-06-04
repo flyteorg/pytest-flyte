@@ -3,11 +3,13 @@ import os
 import pathlib
 import shutil
 from contextlib import contextmanager
+import subprocess
+import yaml
 
 import pytest
 from flytekit.clients import friendly
 from pytest_docker.plugin import DockerComposeExecutor
-
+from pathlib import Path
 from jinja2 import Environment, FileSystemLoader
 
 PROJECT_ROOT = os.path.dirname(__file__)
@@ -28,6 +30,12 @@ def pytest_addoption(parser):
         action="store",
         default=None,
         help="Flyte Platform URL",
+    )
+    parser.addoption(
+        "--proto-path",
+        action="store",
+        default=None,
+        help="Serialized Data Proto Path",
     )
 
 
@@ -98,8 +106,13 @@ def flyte_workflows_source_dir(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def flyte_workflows_register(docker_compose):
-    docker_compose.execute("exec backend -w /flyteorg/src make register")
+def flyte_workflows_register(request):
+    if request.config.getoption("--proto-path"):
+        proto_path = request.config.getoption("--proto-path")
+        subprocess.check_call(f"flytectl register file {proto_path}", shell=True)
+    else:
+        docker_compose = request.getfixturevalue("docker_compose")
+        docker_compose.execute("exec backend -w /flyteorg/src make register")
 
 
 @pytest.fixture(scope="session")
@@ -153,6 +166,18 @@ def flyteclient(request):
         os.environ["FLYTE_PLATFORM_URL"] = url
         os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
 
+        # create flytectl config
+        if request.config.getoption("--proto-path"):
+            os.makedirs(os.path.join(str(Path.home()), ".flyte"), exist_ok=True)
+            config = {
+                "admin": {"endpoint": "dns:///" + url, "insecure": True},
+                "logger": {"show-source": True, "level": 1},
+            }
+            with open(
+                os.path.join(str(Path.home()), ".flyte", "config.yaml"), "w"
+            ) as yaml_file:
+                yaml.dump(config, yaml_file, default_flow_style=False)
+
         def _check():
             try:
                 docker_compose.execute("exec backend wait-for-flyte.sh")
@@ -168,10 +193,14 @@ def flyteclient(request):
     else:
         capsys_suspender = request.getfixturevalue("capsys_suspender")
         if request.config.getoption("--flyte-platform-url"):
+            if not request.config.getoption("--proto-path"):
+                raise ValueError("Serialized Data Proto Path must be set")
+
             os.environ["FLYTE_PLATFORM_URL"] = request.config.getoption(
                 "--flyte-platform-url"
             )
             os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
+
             with capsys_suspender():
                 return friendly.SynchronousFlyteClient(
                     os.environ["FLYTE_PLATFORM_URL"],
