@@ -17,6 +17,7 @@ requirements: requirements.txt dev-requirements.txt
 
 .PHONY: setup
 setup: install-piptools ## Install requirements
+	curl -s https://raw.githubusercontent.com/lyft/flytectl/master/install.sh | bash
 	pip-sync requirements.txt dev-requirements.txt
 
 PLACEHOLDER := "__version__\ =\ \"0.0.0+develop\""

@@ -108,7 +108,7 @@ def flyte_workflows_source_dir(pytestconfig):
 @pytest.fixture(scope="session")
 def flyte_workflows_register(request):
     proto_path = request.config.getoption("--proto-path")
-    subprocess.check_call(f"flytectl register file {proto_path}", shell=True)
+    subprocess.check_call(f"bin/flytectl register file {proto_path}", shell=True)
 
 
 @pytest.fixture(scope="session")

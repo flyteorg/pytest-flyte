@@ -21,7 +21,7 @@ def flyte_workflows_source_dir():
 def flyte_workflows_register(request):
     proto_path = request.config.getoption("--proto-path")
     subprocess.check_call(
-        f"flytectl register files {proto_path} -p {PROJECT} -d {DOMAIN} -v v{VERSION}",
+        f"bin/flytectl register files {proto_path} -p {PROJECT} -d {DOMAIN} -v v{VERSION}",
         shell=True,
     )
 
