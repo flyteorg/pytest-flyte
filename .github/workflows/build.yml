@@ -21,11 +21,16 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: install dependencies
       run: make setup
+    - uses: unionai/flytectl-setup-action@v0.0.1
+    - name: Setup flytectl config
+      run: |
+        mkdir ~/.flyte
+        flytectl config init
     - name: test
       # https://github.com/actions/runner/issues/241#issuecomment-577360161
       shell: 'script -q -e -c "bash {0}"'
       run: |
-        coverage run -m pytest tests --proto-path=tests/integration/mock_flyte_repo/workflows/_pb_output/* -vv -s --trace-config
+        coverage run -m pytest tests --proto-path=tests/integration/mock_flyte_repo/workflows/_pb_output/* --source=./ -vv -s --trace-config
     - name: Codecov
       uses: codecov/codecov-action@v1
       with:
