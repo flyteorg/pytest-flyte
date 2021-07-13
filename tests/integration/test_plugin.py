@@ -10,11 +10,6 @@ PROJECT = "flytesnacks"
 DOMAIN = "development"
 VERSION = os.getpid()
 
-
-def flyte_workflows_source_dir():
-    return pathlib.Path(os.path.dirname(__file__)) / "mock_flyte_repo"
-
-
 @pytest.fixture(scope="session")
 def flyte_workflows_register(request):
     proto_path = request.config.getoption("--proto-path")

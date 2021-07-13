@@ -98,20 +98,21 @@ def flyteclient(request):
 
         subprocess.check_call(f"{sandbox_command}", shell=True)
 
-        os.environ["FLYTE_PLATFORM_URL"] = "http://127.0.0.1:30081"
-        os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
+        os.environ["FLYTE_PLATFORM_URL"] = "dns:///127.0.0.1:30081"
+
 
     else:
         if request.config.getoption("--flyte-platform-url"):
             os.environ["FLYTE_PLATFORM_URL"] = request.config.getoption(
                 "--flyte-platform-url"
             )
-            os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
 
         else:
             raise ValueError("Flyte Platform URL must be set")
+
+
     with capsys_suspender():
         return friendly.SynchronousFlyteClient(
             os.environ["FLYTE_PLATFORM_URL"],
-            insecure=bool(os.environ["FLYTE_PLATFORM_INSECURE"]),
+            insecure=True,
         )
