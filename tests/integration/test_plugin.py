@@ -5,14 +5,12 @@ import subprocess
 import pytest
 from flytekit.common import launch_plan
 from flytekit.models import literals
-from flytekit.models.core.identifier import Identifier, ResourceType
 
 PROJECT = "flytesnacks"
 DOMAIN = "development"
 VERSION = os.getpid()
 
 
-@pytest.fixture(scope="session")
 def flyte_workflows_source_dir():
     return pathlib.Path(os.path.dirname(__file__)) / "mock_flyte_repo"
 
@@ -21,7 +19,7 @@ def flyte_workflows_source_dir():
 def flyte_workflows_register(request):
     proto_path = request.config.getoption("--proto-path")
     subprocess.check_call(
-        f"bin/flytectl register files {proto_path} -p {PROJECT} -d {DOMAIN} -v v{VERSION}",
+        f"flytectl register files {proto_path} -p {PROJECT} -d {DOMAIN} --version=v{VERSION}",
         shell=True,
     )
 
