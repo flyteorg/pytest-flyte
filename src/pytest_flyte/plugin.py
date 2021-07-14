@@ -11,10 +11,10 @@ PROJECT_ROOT = os.path.dirname(__file__)
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--local",
+        "--remote",
         action="store",
-        default=True,
-        help="Local/Remote",
+        default=False,
+        help="Remote cluster",
     )
     parser.addoption(
         "--flyte-platform-url",
@@ -85,7 +85,14 @@ def flyteclient(request):
     if not request.config.getoption("--version"):
         version = ""
 
-    if request.config.getoption("--local") in ["True", "true", True]:
+    if request.config.getoption("--remote") in ["True", "true", True]:
+        if request.config.getoption("--flyte-platform-url"):
+            url = request.config.getoption(
+                "--flyte-platform-url"
+            )
+        else:
+            raise ValueError("Flyte Platform URL must be set")
+    else:
         sandbox_command = "flytectl sandbox start"
         if len(source) > 0:
             sandbox_command = f"{sandbox_command} --source={source}"
@@ -96,13 +103,6 @@ def flyteclient(request):
 
         os.environ["FLYTECTL_CONFIG"] = f"{Path.home()}/.flyte/config-sandbox.yaml"
         url = "127.0.0.1:30081"
-    else:
-        if request.config.getoption("--flyte-platform-url"):
-            url = request.config.getoption(
-                "--flyte-platform-url"
-            )
-        else:
-            raise ValueError("Flyte Platform URL must be set")
 
     os.environ["FLYTE_PLATFORM_URL"] = url
     os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
