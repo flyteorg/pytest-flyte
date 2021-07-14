@@ -3,14 +3,11 @@ import subprocess
 from contextlib import contextmanager
 
 import pytest
+from pathlib import Path
 from flytekit.clients import friendly
 from jinja2 import Environment, FileSystemLoader
 
 PROJECT_ROOT = os.path.dirname(__file__)
-TEMPLATE_ENV = Environment(
-    loader=FileSystemLoader(os.path.join(PROJECT_ROOT, "templates"))
-)
-
 
 def pytest_addoption(parser):
     parser.addoption(
@@ -78,16 +75,16 @@ def flyte_workflows_register(request):
 
 @pytest.fixture(scope="session")
 def flyteclient(request):
-    version = ""
     url = ""
+    version = request.config.getoption("--version")
+    source = request.config.getoption("--source")
     if not request.config.getoption("--proto-path"):
         raise ValueError("Serialized Data Proto Path must be set")
     if not request.config.getoption("--source"):
-        raise ValueError("Source directory path must be set")
-    if request.config.getoption("--version"):
-        version = request.config.getoption("--version")
+        source = PROJECT_ROOT
+    if not request.config.getoption("--version"):
+        version = ""
 
-    source = request.config.getoption("--source")
     if request.config.getoption("--local") in ["True", "true", True]:
         sandbox_command = "flytectl sandbox start"
         if len(source) > 0:
@@ -97,15 +94,13 @@ def flyteclient(request):
 
         subprocess.check_call(f"{sandbox_command}", shell=True)
 
+        os.environ["FLYTECTL_CONFIG"] = f"{Path.home()}/.flyte/config-sandbox.yaml"
         url = "127.0.0.1:30081"
-
-
     else:
         if request.config.getoption("--flyte-platform-url"):
             url = request.config.getoption(
                 "--flyte-platform-url"
             )
-
         else:
             raise ValueError("Flyte Platform URL must be set")
 
