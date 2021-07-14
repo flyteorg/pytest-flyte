@@ -1,5 +1,4 @@
 import os
-import pathlib
 import subprocess
 
 import pytest
@@ -19,19 +18,16 @@ def flyte_workflows_register(request):
     )
 
 
-def test_stub(flyteclient, flyte_workflows_register):
-    projects = flyteclient.list_projects_paginated(limit=5, token=None)
-    assert len(projects) <= 5
-
+def test_stub(flyteclient, flyte_workflows_register, capsys_suspender):
+    with capsys_suspender():
+        projects = flyteclient.list_projects_paginated(limit=5, token=None)
+        assert projects.__len__() == 2
 
 def test_launch_workflow(flyteclient, flyte_workflows_register):
     lp = launch_plan.SdkLaunchPlan.fetch(
-        "flytesnacks",
-        "development",
-        "workflows.hello_world.my_wf",
-        f"v{VERSION}",
+        PROJECT, DOMAIN, "workflows.hello_world.my_wf", f"v{os.getpid()}"
     )
     execution = lp.launch_with_literals(
-        "flytesnacks", "development", literals.LiteralMap({})
+        PROJECT, DOMAIN, literals.LiteralMap({})
     )
     print(execution.id.name)

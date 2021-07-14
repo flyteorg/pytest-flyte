@@ -73,14 +73,13 @@ def capsys_suspender(pytestconfig):
 @pytest.fixture(scope="session")
 def flyte_workflows_register(request):
     proto_path = request.config.getoption("--proto-path")
-    subprocess.check_call(f"flytectl register file {proto_path}", shell=True)
+    subprocess.check_call(f"flytectl register file {proto_path} -p flytesnacks -d development", shell=True)
 
 
 @pytest.fixture(scope="session")
 def flyteclient(request):
-    capsys_suspender = request.getfixturevalue("capsys_suspender")
     version = ""
-
+    url = ""
     if not request.config.getoption("--proto-path"):
         raise ValueError("Serialized Data Proto Path must be set")
     if not request.config.getoption("--source"):
@@ -98,21 +97,18 @@ def flyteclient(request):
 
         subprocess.check_call(f"{sandbox_command}", shell=True)
 
-        os.environ["FLYTE_PLATFORM_URL"] = "dns:///127.0.0.1:30081"
+        url = "127.0.0.1:30081"
 
 
     else:
         if request.config.getoption("--flyte-platform-url"):
-            os.environ["FLYTE_PLATFORM_URL"] = request.config.getoption(
+            url = request.config.getoption(
                 "--flyte-platform-url"
             )
 
         else:
             raise ValueError("Flyte Platform URL must be set")
 
-
-    with capsys_suspender():
-        return friendly.SynchronousFlyteClient(
-            os.environ["FLYTE_PLATFORM_URL"],
-            insecure=True,
-        )
+    os.environ["FLYTE_PLATFORM_URL"] = url
+    os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
+    return friendly.SynchronousFlyteClient(url, insecure=True)
