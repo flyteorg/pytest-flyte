@@ -1,28 +1,45 @@
-import hashlib
 import os
-import pathlib
-import shutil
+import subprocess
 from contextlib import contextmanager
 
 import pytest
+from pathlib import Path
 from flytekit.clients import friendly
-from pytest_docker.plugin import DockerComposeExecutor
-
 from jinja2 import Environment, FileSystemLoader
 
 PROJECT_ROOT = os.path.dirname(__file__)
-TEMPLATE_ENV = Environment(loader=FileSystemLoader(os.path.join(PROJECT_ROOT, "templates")))
 
-
-@pytest.hookimpl(tryfirst=True)
-def pytest_addhooks(pluginmanager):
-    import pytest_docker.plugin
-
-    # make sure docker plugin is registered before flyte so pytest-flyte overrides pytest-docker fixtures
-    try:
-        pluginmanager.register(pytest_docker.plugin, "docker")
-    except ValueError as exc:
-        print(f"pytest-docker already registered: {exc}")
+def pytest_addoption(parser):
+    parser.addoption(
+        "--remote",
+        action="store",
+        default=False,
+        help="Remote cluster",
+    )
+    parser.addoption(
+        "--flyte-platform-url",
+        action="store",
+        default=None,
+        help="Flyte Platform URL",
+    )
+    parser.addoption(
+        "--proto-path",
+        action="store",
+        default=None,
+        help="Serialized Data Proto Path",
+    )
+    parser.addoption(
+        "--source",
+        action="store",
+        default=None,
+        help="Source directory Path",
+    )
+    parser.addoption(
+        "--kustomize",
+        action="store",
+        default=None,
+        help="Kustomize file path",
+    )
 
 
 @pytest.fixture(scope="session")
@@ -42,7 +59,7 @@ def capsys_suspender(pytestconfig):
 
     @contextmanager
     def _capsys_suspender():
-        capmanager = pytestconfig.pluginmanager.getplugin('capturemanager')
+        capmanager = pytestconfig.pluginmanager.getplugin("capturemanager")
         capmanager.suspend_global_capture(in_=True)
         yield
         capmanager.resume_global_capture()
@@ -51,92 +68,42 @@ def capsys_suspender(pytestconfig):
 
 
 @pytest.fixture(scope="session")
-def docker_compose_project_name():
-    return "pytest-flyte"
+def flyte_workflows_register(request):
+    proto_path = request.config.getoption("--proto-path")
+    subprocess.check_call(f"flytectl register file {proto_path} -p flytesnacks -d development", shell=True)
 
 
 @pytest.fixture(scope="session")
-def template_cache(pytestconfig):
-    d = pathlib.Path(pytestconfig.rootdir) / ".pytest_flyte"
-    d.mkdir(parents=True, exist_ok=True)
-    yield d
-    shutil.rmtree(d)
+def flyteclient(request):
+    url = ""
+    version = request.config.getoption("--version")
+    source = request.config.getoption("--source")
+    if not request.config.getoption("--proto-path"):
+        raise ValueError("Serialized Data Proto Path must be set")
+    if not request.config.getoption("--source"):
+        source = PROJECT_ROOT
+    if not request.config.getoption("--version"):
+        version = ""
 
+    if request.config.getoption("--remote") in ["True", "true", True]:
+        if request.config.getoption("--flyte-platform-url"):
+            url = request.config.getoption(
+                "--flyte-platform-url"
+            )
+        else:
+            raise ValueError("Flyte Platform URL must be set")
+    else:
+        sandbox_command = "flytectl sandbox start"
+        if len(source) > 0:
+            sandbox_command = f"{sandbox_command} --source={source}"
+        if len(version) > 0:
+            sandbox_command = f"{sandbox_command} --version={version}"
 
-@pytest.fixture(scope="session")
-def kustomization_file(template_cache):
-    template = TEMPLATE_ENV.get_template("kustomization.yaml.tmpl")
-    contents = template.render()
-    checksum = hashlib.md5(contents.encode()).hexdigest()
+        subprocess.check_call(f"{sandbox_command}", shell=True)
 
-    with open(template_cache / f"kustomization-{checksum}.yaml", "w") as handle:
-        print(contents, file=handle)
-        handle.seek(0)
-        yield handle.name
+        os.environ["FLYTECTL_CONFIG"] = f"{Path.home()}/.flyte/config-sandbox.yaml"
+        url = "127.0.0.1:30081"
 
-
-@pytest.fixture(scope="session")
-def flyte_workflows_source_dir(pytestconfig):
-    return str(pytestconfig.rootdir)
-
-
-@pytest.fixture(scope="session")
-def flyte_workflows_register(docker_compose):
-    docker_compose.execute("exec backend -w /flyteorg/src make register")
-
-
-@pytest.fixture(scope="session")
-def docker_compose(docker_compose_file, docker_compose_project_name, capsys_suspender):
-
-    class _DockerComposeExecutor(DockerComposeExecutor):
-        """
-        This subclass wraps the DockerComposeExecutor.execute method so that pytest capture sys stdin/out/err
-        is suspended whenever docker compose execute is invoked. This is so that the end user doesn't have to
-        use capsys_suspender when using this fixture.
-        """
-        def execute(self, subcommand):
-            with capsys_suspender():
-                super().execute(subcommand)
-
-    return _DockerComposeExecutor(docker_compose_file, docker_compose_project_name)
-
-
-@pytest.fixture(scope="session")
-def docker_compose_file(flyte_workflows_source_dir, kustomization_file, template_cache):
-    with open(template_cache / "docker-compose.yaml", "w") as handle:
-        template = TEMPLATE_ENV.get_template("docker-compose.yaml.tmpl")
-        print(
-            template.render(
-                build_context_dir=os.path.join(PROJECT_ROOT, "docker"),
-                flyte_workflows_source_dir=flyte_workflows_source_dir,
-                kustomization_file_path=kustomization_file,
-            ),
-            file=handle,
-        )
-        handle.seek(0)
-        yield handle.name
-
-
-@pytest.fixture(scope="session")
-def docker_cleanup():
-    return "version"
-
-
-@pytest.fixture(scope="session")
-def flyteclient(docker_ip, docker_services, docker_compose, capsys_suspender):
-    port = docker_services.port_for("backend", 30081)
-    url = f"{docker_ip}:{port}"
     os.environ["FLYTE_PLATFORM_URL"] = url
     os.environ["FLYTE_PLATFORM_INSECURE"] = "true"
-
-    def _check():
-        try:
-            docker_compose.execute("exec backend wait-for-flyte.sh")
-            return True
-        except Exception as e:
-            print(e)
-            return False
-
-    with capsys_suspender():
-        docker_services.wait_until_responsive(timeout=900, pause=1, check=_check)
     return friendly.SynchronousFlyteClient(url, insecure=True)

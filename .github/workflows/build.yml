@@ -7,12 +7,12 @@ on:
   pull_request:
 
 jobs:
-  build:
+  local-cluster:
     runs-on: ubuntu-latest
+    name: Integration test with sandbox flyte cluster
     strategy:
       matrix:
         python-version: [3.7, 3.8]
-    
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -21,11 +21,40 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: install dependencies
       run: make setup
+    - uses: unionai/flytectl-setup-action@v0.0.1
     - name: test
       # https://github.com/actions/runner/issues/241#issuecomment-577360161
       shell: 'script -q -e -c "bash {0}"'
       run: |
-        coverage run -m pytest tests -vv -s --trace-config
+        coverage run -m pytest tests --proto-path=tests/integration/mock_flyte_repo/workflows/_pb_output/* --source=./ -vv -s --trace-config
+    - name: Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        fail_ci_if_error: true
+  remote-cluster:
+    name: Integration test with remote flyte cluster
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: install dependencies
+      run: make setup
+    - uses: unionai/flytectl-setup-action@v0.0.1
+    - name: Run Sandbox Cluster
+      run: |
+        flytectl sandbox start
+        flytectl config init
+    - name: test
+      # https://github.com/actions/runner/issues/241#issuecomment-577360161
+      shell: 'script -q -e -c "bash {0}"'
+      run: |
+        coverage run -m pytest tests --proto-path=tests/integration/mock_flyte_repo/workflows/_pb_output/* --remote=True --flyte-platform-url=127.0.0.1:30081 --source=./ -vv -s --trace-config
     - name: Codecov
       uses: codecov/codecov-action@v1
       with:
