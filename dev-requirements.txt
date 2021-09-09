@@ -42,7 +42,7 @@ decorator==5.0.9
     # via
     #   -c requirements.txt
     #   retry
-deprecated==1.2.12
+deprecated==1.2.13
     # via
     #   -c requirements.txt
     #   flytekit
@@ -66,11 +66,11 @@ flyteidl==0.20.2
     # via
     #   -c requirements.txt
     #   flytekit
-flytekit==0.22.0
+flytekit==0.22.1
     # via
     #   -c requirements.txt
     #   -r dev-requirements.in
-grpcio==1.39.0
+grpcio==1.40.0
     # via
     #   -c requirements.txt
     #   flytekit
